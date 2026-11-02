@@ -3,7 +3,13 @@ services:
     build: .
     image: seafile-mcp:latest
     env_file: .env
-    # The server speaks MCP over stdio, so keep stdin open (no TTY).
-    stdin_open: true
-    tty: false
-    restart: "no"
+    environment:
+      MCP_TRANSPORT: streamable-http
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8000
+      # Defaults to /mcp. Set MCP_PATH in .env to a long random value
+      # (e.g. /mcp/3f9c...) because the URL is the only thing protecting it.
+      MCP_PATH: ${MCP_PATH:-/mcp}
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped

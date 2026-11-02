@@ -26,25 +26,32 @@ cd seafile-mcp
 pip install -e .
 ```
 
-### Using Docker Compose
+### Using Docker Compose (HTTP, for Claude custom connectors)
+
+The compose file runs the server over Streamable HTTP on `127.0.0.1:8000`.
 
 ```bash
-cp .env.example .env   # fill in your Seafile credentials
-docker compose build
+cp .env.example .env          # fill in your Seafile credentials
+echo "MCP_PATH=/mcp/$(openssl rand -hex 24)" >> .env
+docker compose up -d --build
 ```
 
-The server talks MCP over stdio, so point your MCP client at the container:
+Claude connects from Anthropic's cloud, so the endpoint must be reachable from
+the internet over **HTTPS**. Put a reverse proxy (Caddy, Traefik, nginx) or a
+tunnel (Cloudflare Tunnel, Tailscale Funnel) in front of port 8000, then in
+Claude go to **Settings → Connectors → Add custom connector** and enter:
 
-```json
-{
-  "mcpServers": {
-    "seafile": {
-      "command": "docker",
-      "args": ["compose", "-f", "/path/to/seafile-mcp/docker-compose.yml", "run", "--rm", "-T", "seafile-mcp"]
-    }
-  }
-}
 ```
+https://your-domain.example/mcp/<your-random-MCP_PATH>
+```
+
+> **Security:** custom connectors only support OAuth or no auth. This server
+> doesn't implement OAuth, so the random `MCP_PATH` is the only thing between
+> the internet and your Seafile account. Keep it secret, and prefer a
+> `SEAFILE_REPO_TOKEN` scoped to one library over your account password.
+
+To run it over stdio instead (Claude Desktop, OpenCode…), set
+`MCP_TRANSPORT=stdio` or run the image directly: `docker run -i --rm --env-file .env seafile-mcp`.
 
 ## Configuration
 
@@ -71,6 +78,9 @@ Create a `.env` file or set environment variables:
 - `SEAFILE_MAX_READ_SIZE`: Max file size to read (default: 1MB)
 - `SEAFILE_MAX_WRITE_SIZE`: Max upload size (default: 10MB)
 - `SEAFILE_TIMEOUT`: Request timeout in seconds (default: 30)
+- `MCP_TRANSPORT`: `stdio` (default), `streamable-http` or `sse`
+- `MCP_HOST` / `MCP_PORT`: HTTP bind address (default: `0.0.0.0:8000`)
+- `MCP_PATH`: HTTP endpoint path (default: `/mcp`)
 
 ## Usage with OpenCode
 

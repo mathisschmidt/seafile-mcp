@@ -13,5 +13,6 @@ RUN pip install .
 RUN useradd --create-home --uid 1000 mcp
 USER mcp
 
-# MCP over stdio
+# Defaults to stdio; set MCP_TRANSPORT=streamable-http to serve over HTTP
+EXPOSE 8000
 ENTRYPOINT ["seafile-mcp"]
