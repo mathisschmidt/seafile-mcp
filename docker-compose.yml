@@ -1,0 +1,9 @@
+services:
+  seafile-mcp:
+    build: .
+    image: seafile-mcp:latest
+    env_file: .env
+    # The server speaks MCP over stdio, so keep stdin open (no TTY).
+    stdin_open: true
+    tty: false
+    restart: "no"

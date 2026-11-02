@@ -26,6 +26,26 @@ cd seafile-mcp
 pip install -e .
 ```
 
+### Using Docker Compose
+
+```bash
+cp .env.example .env   # fill in your Seafile credentials
+docker compose build
+```
+
+The server talks MCP over stdio, so point your MCP client at the container:
+
+```json
+{
+  "mcpServers": {
+    "seafile": {
+      "command": "docker",
+      "args": ["compose", "-f", "/path/to/seafile-mcp/docker-compose.yml", "run", "--rm", "-T", "seafile-mcp"]
+    }
+  }
+}
+```
+
 ## Configuration
 
 Create a `.env` file or set environment variables:
