@@ -26,32 +26,37 @@ cd seafile-mcp
 pip install -e .
 ```
 
-### Using Docker Compose (HTTP, for Claude custom connectors)
+### Using Docker Compose (HTTP + OAuth, for Claude custom connectors)
 
-The compose file runs the server over Streamable HTTP on `127.0.0.1:8000`.
+The compose file runs the server over Streamable HTTP on `127.0.0.1:8000`, with
+a built-in OAuth 2.1 server (dynamic client registration + PKCE), which is what
+Claude's custom connectors expect.
 
 ```bash
-cp .env.example .env          # fill in your Seafile credentials
-echo "MCP_PATH=/mcp/$(openssl rand -hex 24)" >> .env
+cp .env.example .env   # fill in Seafile credentials, MCP_PUBLIC_URL and MCP_AUTH_PASSWORD
 docker compose up -d --build
 ```
 
-Claude connects from Anthropic's cloud, so the endpoint must be reachable from
-the internet over **HTTPS**. Put a reverse proxy (Caddy, Traefik, nginx) or a
-tunnel (Cloudflare Tunnel, Tailscale Funnel) in front of port 8000, then in
-Claude go to **Settings → Connectors → Add custom connector** and enter:
+Claude connects from Anthropic's cloud, so the server must be reachable from the
+internet over **HTTPS**. Put a reverse proxy (Caddy, Traefik, nginx) or a tunnel
+(Cloudflare Tunnel, Tailscale Funnel) in front of port 8000, and set
+`MCP_PUBLIC_URL` to that public URL (for example `https://mcp.example.com`).
+The whole host must be proxied, not just `/mcp`: the OAuth endpoints live at
+`/.well-known/*`, `/register`, `/authorize`, `/token` and `/oauth/login`.
 
-```
-https://your-domain.example/mcp/<your-random-MCP_PATH>
-```
+Then in Claude go to **Settings → Connectors → Add custom connector**, enter
+`https://mcp.example.com/mcp` and click **Connect**. A sign-in page opens; enter
+`MCP_AUTH_PASSWORD` to allow access. Tokens are refreshed automatically and are
+kept in the `oauth-data` volume, so restarts don't disconnect Claude.
 
-> **Security:** custom connectors only support OAuth or no auth. This server
-> doesn't implement OAuth, so the random `MCP_PATH` is the only thing between
-> the internet and your Seafile account. Keep it secret, and prefer a
+> **Security:** the server holds your Seafile credentials, so anyone who knows
+> `MCP_AUTH_PASSWORD` can use them. Pick a long random password, and prefer a
 > `SEAFILE_REPO_TOKEN` scoped to one library over your account password.
+> To revoke every connection, stop the container, delete the `oauth-data`
+> volume and start it again.
 
-To run it over stdio instead (Claude Desktop, OpenCode…), set
-`MCP_TRANSPORT=stdio` or run the image directly: `docker run -i --rm --env-file .env seafile-mcp`.
+To run it over stdio instead (Claude Desktop, OpenCode…), run the image
+directly: `docker run -i --rm --env-file .env seafile-mcp`.
 
 ## Configuration
 
@@ -81,6 +86,11 @@ Create a `.env` file or set environment variables:
 - `MCP_TRANSPORT`: `stdio` (default), `streamable-http` or `sse`
 - `MCP_HOST` / `MCP_PORT`: HTTP bind address (default: `0.0.0.0:8000`)
 - `MCP_PATH`: HTTP endpoint path (default: `/mcp`)
+- `MCP_AUTH`: `oauth` (default in HTTP mode) or `none`
+- `MCP_PUBLIC_URL`: public HTTPS URL of the server, required with OAuth
+- `MCP_AUTH_PASSWORD`: sign-in password for OAuth (min 12 characters)
+- `MCP_OAUTH_STATE_FILE`: file that keeps OAuth clients/tokens across restarts
+- `MCP_ACCESS_TOKEN_TTL` / `MCP_REFRESH_TOKEN_TTL`: token lifetimes in seconds (default: 1 h / 30 days)
 
 ## Usage with OpenCode
 

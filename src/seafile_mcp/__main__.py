@@ -10,6 +10,49 @@ from dotenv import load_dotenv
 TRANSPORTS = ("stdio", "streamable-http", "sse")
 
 
+def _enable_oauth(mcp, path: str) -> None:
+    """Turn on the built-in OAuth authorization server (used by Claude custom connectors)."""
+    from mcp.server.auth.provider import ProviderTokenVerifier
+    from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
+
+    from seafile_mcp.auth import LOGIN_PATH, SCOPE, SeafileOAuthProvider
+
+    public_url = os.getenv("MCP_PUBLIC_URL", "").strip().rstrip("/")
+    if not public_url:
+        raise ValueError(
+            "MCP_PUBLIC_URL is required with OAuth: the public HTTPS URL of this server "
+            "(e.g. https://mcp.example.com), without the /mcp path"
+        )
+    password = os.getenv("MCP_AUTH_PASSWORD", "")
+    if not password:
+        raise ValueError(
+            "MCP_AUTH_PASSWORD is required with OAuth (or set MCP_AUTH=none to disable auth)"
+        )
+
+    provider = SeafileOAuthProvider(
+        issuer_url=public_url,
+        password=password,
+        state_file=os.getenv("MCP_OAUTH_STATE_FILE") or None,
+        access_token_ttl=int(os.getenv("MCP_ACCESS_TOKEN_TTL", "3600")),
+        refresh_token_ttl=int(os.getenv("MCP_REFRESH_TOKEN_TTL", str(30 * 24 * 3600))),
+    )
+    mcp.settings.auth = AuthSettings(
+        issuer_url=public_url,
+        resource_server_url=public_url + path,
+        validate_token_resource=False,
+        required_scopes=[SCOPE],
+        client_registration_options=ClientRegistrationOptions(
+            enabled=True, valid_scopes=[SCOPE], default_scopes=[SCOPE]
+        ),
+        revocation_options=RevocationOptions(enabled=True),
+    )
+    # The server object is created at import time, so attach the provider afterwards.
+    mcp._auth_server_provider = provider
+    mcp._token_verifier = ProviderTokenVerifier(provider)
+    mcp.custom_route(LOGIN_PATH, methods=["GET", "POST"])(provider.login_page)
+    print(f"OAuth enabled, issuer {public_url}", file=sys.stderr)
+
+
 def main() -> None:
     """Run the Seafile MCP server."""
     # Load environment variables from .env file
@@ -38,6 +81,18 @@ def main() -> None:
             mcp.settings.transport_security = TransportSecuritySettings(
                 enable_dns_rebinding_protection=False
             )
+            auth_mode = os.getenv("MCP_AUTH", "oauth").strip().lower()
+            if auth_mode == "oauth":
+                _enable_oauth(mcp, path)
+            elif auth_mode != "none":
+                raise ValueError(f"MCP_AUTH must be 'oauth' or 'none' (got {auth_mode!r})")
+            else:
+                print(
+                    "WARNING: MCP_AUTH=none, anyone who can reach this URL can use your "
+                    "Seafile account.",
+                    file=sys.stderr,
+                )
+
             print(
                 f"Seafile MCP listening on http://{mcp.settings.host}:{mcp.settings.port}"
                 f"{path} ({transport})",
