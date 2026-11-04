@@ -14,6 +14,6 @@ RUN useradd --create-home --uid 1000 mcp \
     && mkdir /data && chown mcp:mcp /data
 USER mcp
 
-# Defaults to stdio; set MCP_TRANSPORT=streamable-http to serve over HTTP
+# Serves over HTTP by default; set MCP_TRANSPORT=stdio for stdio clients
 EXPOSE 8000
 ENTRYPOINT ["seafile-mcp"]

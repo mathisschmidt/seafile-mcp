@@ -20,14 +20,10 @@ def _enable_oauth(mcp, path: str) -> None:
     public_url = os.getenv("MCP_PUBLIC_URL", "").strip().rstrip("/")
     if not public_url:
         raise ValueError(
-            "MCP_PUBLIC_URL is required with OAuth: the public HTTPS URL of this server "
-            "(e.g. https://mcp.example.com), without the /mcp path"
+            "MCP_PUBLIC_URL is required with MCP_AUTH_PASSWORD: the public HTTPS URL of "
+            "this server (e.g. https://mcp.example.com), without the /mcp path"
         )
     password = os.getenv("MCP_AUTH_PASSWORD", "")
-    if not password:
-        raise ValueError(
-            "MCP_AUTH_PASSWORD is required with OAuth (or set MCP_AUTH=none to disable auth)"
-        )
 
     provider = SeafileOAuthProvider(
         issuer_url=public_url,
@@ -62,7 +58,7 @@ def main() -> None:
         # Import here to ensure .env is loaded first
         from seafile_mcp.server import mcp
 
-        transport = os.getenv("MCP_TRANSPORT", "stdio").strip().lower()
+        transport = os.getenv("MCP_TRANSPORT", "streamable-http").strip().lower()
         if transport not in TRANSPORTS:
             raise ValueError(
                 f"MCP_TRANSPORT must be one of {', '.join(TRANSPORTS)} (got {transport!r})"
@@ -81,15 +77,19 @@ def main() -> None:
             mcp.settings.transport_security = TransportSecuritySettings(
                 enable_dns_rebinding_protection=False
             )
-            auth_mode = os.getenv("MCP_AUTH", "oauth").strip().lower()
-            if auth_mode == "oauth":
+            # OAuth is on as soon as a sign-in password is set. A public URL without
+            # a password is refused, so an exposed server is never left open.
+            if os.getenv("MCP_AUTH_PASSWORD"):
                 _enable_oauth(mcp, path)
-            elif auth_mode != "none":
-                raise ValueError(f"MCP_AUTH must be 'oauth' or 'none' (got {auth_mode!r})")
+            elif os.getenv("MCP_PUBLIC_URL", "").strip():
+                raise ValueError(
+                    "MCP_AUTH_PASSWORD is required when MCP_PUBLIC_URL is set "
+                    "(the server is reachable from the internet)"
+                )
             else:
                 print(
-                    "WARNING: MCP_AUTH=none, anyone who can reach this URL can use your "
-                    "Seafile account.",
+                    "WARNING: no MCP_AUTH_PASSWORD, authentication is off. Anyone who can "
+                    "reach this port can use your Seafile account.",
                     file=sys.stderr,
                 )
 

@@ -57,7 +57,7 @@ kept in the `oauth-data` volume, so restarts don't disconnect Claude.
 > volume and start it again.
 
 To run it over stdio instead (Claude Desktop, OpenCode…), run the image
-directly: `docker run -i --rm --env-file .env seafile-mcp`.
+directly: `docker run -i --rm --env-file .env -e MCP_TRANSPORT=stdio seafile-mcp`.
 
 ## Configuration
 
@@ -84,12 +84,12 @@ Create a `.env` file or set environment variables:
 - `SEAFILE_MAX_READ_SIZE`: Max file size to read (default: 1MB)
 - `SEAFILE_MAX_WRITE_SIZE`: Max upload size (default: 10MB)
 - `SEAFILE_TIMEOUT`: Request timeout in seconds (default: 30)
-- `MCP_TRANSPORT`: `stdio` (default), `streamable-http` or `sse`
+- `MCP_TRANSPORT`: `streamable-http` (default), `sse` or `stdio`
 - `MCP_HOST` / `MCP_PORT`: HTTP bind address (default: `0.0.0.0:8000`)
 - `MCP_PATH`: HTTP endpoint path (default: `/mcp`)
-- `MCP_AUTH`: `oauth` (default in HTTP mode) or `none`
-- `MCP_PUBLIC_URL`: public HTTPS URL of the server, required with OAuth
-- `MCP_AUTH_PASSWORD`: sign-in password for OAuth (min 12 characters)
+- `MCP_AUTH_PASSWORD`: sign-in password (min 12 characters). Setting it turns on OAuth;
+  without it the HTTP server has no authentication (refused if `MCP_PUBLIC_URL` is set)
+- `MCP_PUBLIC_URL`: public HTTPS URL of the server, required with `MCP_AUTH_PASSWORD`
 - `MCP_OAUTH_STATE_FILE`: file that keeps OAuth clients/tokens across restarts
 - `MCP_ACCESS_TOKEN_TTL` / `MCP_REFRESH_TOKEN_TTL`: token lifetimes in seconds (default: 1 h / 30 days)
 
@@ -104,6 +104,7 @@ Add to your OpenCode MCP configuration:
       "command": "python",
       "args": ["-m", "seafile_mcp"],
       "env": {
+        "MCP_TRANSPORT": "stdio",
         "SEAFILE_SERVER_URL": "https://your-seafile.com",
         "SEAFILE_USERNAME": "user@example.com",
         "SEAFILE_PASSWORD": "your-password"
@@ -121,6 +122,7 @@ Or with library token:
     "seafile": {
       "command": "seafile-mcp",
       "env": {
+        "MCP_TRANSPORT": "stdio",
         "SEAFILE_SERVER_URL": "https://your-seafile.com",
         "SEAFILE_REPO_TOKEN": "your-api-token",
         "SEAFILE_REPO_ID": "library-uuid"
