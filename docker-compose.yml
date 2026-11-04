@@ -6,14 +6,15 @@ services:
     environment:
       MCP_TRANSPORT: streamable-http
       MCP_HOST: 0.0.0.0
-      MCP_PORT: 8000
+      MCP_PORT: ${MCP_PORT:-8000}
       MCP_AUTH: ${MCP_AUTH:-oauth}
       # Keeps OAuth clients and tokens across restarts.
       MCP_OAUTH_STATE_FILE: /data/oauth.json
     volumes:
       - oauth-data:/data
     ports:
-      - "127.0.0.1:8000:8000"
+      # Set MCP_PORT in .env to change the port (host and container).
+      - "127.0.0.1:${MCP_PORT:-8000}:${MCP_PORT:-8000}"
     restart: unless-stopped
 
 volumes:

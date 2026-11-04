@@ -28,7 +28,8 @@ pip install -e .
 
 ### Using Docker Compose (HTTP + OAuth, for Claude custom connectors)
 
-The compose file runs the server over Streamable HTTP on `127.0.0.1:8000`, with
+The compose file runs the server over Streamable HTTP on `127.0.0.1:8000` (set
+`MCP_PORT` in `.env` to use another port), with
 a built-in OAuth 2.1 server (dynamic client registration + PKCE), which is what
 Claude's custom connectors expect.
 
@@ -39,7 +40,7 @@ docker compose up -d --build
 
 Claude connects from Anthropic's cloud, so the server must be reachable from the
 internet over **HTTPS**. Put a reverse proxy (Caddy, Traefik, nginx) or a tunnel
-(Cloudflare Tunnel, Tailscale Funnel) in front of port 8000, and set
+(Cloudflare Tunnel, Tailscale Funnel) in front of that port, and set
 `MCP_PUBLIC_URL` to that public URL (for example `https://mcp.example.com`).
 The whole host must be proxied, not just `/mcp`: the OAuth endpoints live at
 `/.well-known/*`, `/register`, `/authorize`, `/token` and `/oauth/login`.
