@@ -33,8 +33,11 @@ The compose file runs the server over Streamable HTTP on `127.0.0.1:8000` (set
 a built-in OAuth 2.1 server (dynamic client registration + PKCE), which is what
 Claude's custom connectors expect.
 
+Set the variables from [Configuration](#configuration) however you like: shell
+exports, a `.env` file next to `docker-compose.yml` (`.env.example` is a
+template), or your deployment tool's secrets. Then:
+
 ```bash
-cp .env.example .env   # fill in Seafile credentials, MCP_PUBLIC_URL and MCP_AUTH_PASSWORD
 docker compose up -d --build
 ```
 

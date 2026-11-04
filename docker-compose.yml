@@ -2,16 +2,30 @@ services:
   seafile-mcp:
     build: .
     image: seafile-mcp:latest
-    env_file: .env
+    # Variables listed without a value are taken from your environment (shell
+    # exports or a .env file next to this file) and left out when unset.
     environment:
-      MCP_HOST: 0.0.0.0
-      MCP_PORT: ${MCP_PORT:-8000}
+      - SEAFILE_SERVER_URL
+      - SEAFILE_USERNAME
+      - SEAFILE_PASSWORD
+      - SEAFILE_REPO_TOKEN
+      - SEAFILE_REPO_ID
+      - SEAFILE_MAX_READ_SIZE
+      - SEAFILE_MAX_WRITE_SIZE
+      - SEAFILE_TIMEOUT
+      - MCP_PATH
+      - MCP_PUBLIC_URL
+      - MCP_AUTH_PASSWORD
+      - MCP_ACCESS_TOKEN_TTL
+      - MCP_REFRESH_TOKEN_TTL
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=${MCP_PORT:-8000}
       # Keeps OAuth clients and tokens across restarts.
-      MCP_OAUTH_STATE_FILE: /data/oauth.json
+      - MCP_OAUTH_STATE_FILE=/data/oauth.json
     volumes:
       - oauth-data:/data
     ports:
-      # Set MCP_PORT in .env to change the port (host and container).
+      # Set MCP_PORT to change the port (host and container).
       - "127.0.0.1:${MCP_PORT:-8000}:${MCP_PORT:-8000}"
     restart: unless-stopped
 
